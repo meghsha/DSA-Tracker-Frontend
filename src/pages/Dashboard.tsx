@@ -9,10 +9,10 @@ const Dashboard: React.FC = () => {
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [topicsMap, setTopicsMap] = useState<Map<string, Topic[]>>(new Map());
   const [problemsMap, setProblemsMap] = useState<Map<string, Problem[]>>(new Map());
-  const [progressMap, setProgressMap] = useState<Map<string, boolean>>(new Map());
+  const [progressMap, setProgressMap] = useState<Map<string, 'not_started' | 'in_progress' | 'completed'>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [progressSummary, setProgressSummary] = useState<{ completed: number; total: number; percentage: number } | null>(null);
+  const [progressSummary, setProgressSummary] = useState<{ completed: number; inProgress: number; total: number; percentage: number } | null>(null);
   const [expandedChapterId, setExpandedChapterId] = useState<string | null>(null);
   const [expandedTopicId, setExpandedTopicId] = useState<string | null>(null);
 
@@ -35,11 +35,11 @@ const Dashboard: React.FC = () => {
 
         // Fetch progress summary and list
         const progRes = await api.get('/api/progress');
-        setProgressSummary(progRes.data.summary); // { completed, total, percentage }
+        setProgressSummary(progRes.data.summary); // { completed, inProgress, total, percentage }
         const progressList = progRes.data.progress || [];
-        const progressMapTmp = new Map<string, boolean>();
+        const progressMapTmp = new Map<string, 'not_started' | 'in_progress' | 'completed'>();
         progressList.forEach((p: any) => {
-          progressMapTmp.set(p.problemId, !!p.completed);
+          progressMapTmp.set(p.problemId, p.status);
         });
         setProgressMap(progressMapTmp);
 
@@ -70,25 +70,44 @@ const Dashboard: React.FC = () => {
     navigate('/login', { replace: true });
   };
 
-  const handleToggleProblemComplete = async (problemId: string, currentlyCompleted: boolean) => {
+  const handleToggleProblemComplete = async (problemId: string, currentStatus: 'not_started' | 'in_progress' | 'completed') => {
+    // Determine next status in cycle: not_started -> in_progress -> completed -> not_started
+    const nextStatus: 'not_started' | 'in_progress' | 'completed' =
+      currentStatus === 'not_started' ? 'in_progress'
+        : currentStatus === 'in_progress' ? 'completed'
+        : 'not_started';
+
     try {
       await api.put(`/api/progress/${problemId}`, {
-        completed: !currentlyCompleted,
+        status: nextStatus,
       });
 
-      // Update progress map optimistically
-      progressMap.set(problemId, !currentlyCompleted);
-      setProgressMap(new Map(progressMap));
+      // Update progress map immutably
+      const newProgressMap = new Map(progressMap);
+      newProgressMap.set(problemId, nextStatus);
+      setProgressMap(newProgressMap);
 
-      // Update summary
+      // Update summary optimistically
       if (progressSummary) {
-        const newCompleted = currentlyCompleted
-          ? progressSummary.completed - 1
-          : progressSummary.completed + 1;
+        let newCompleted = progressSummary.completed;
+        let newInProgress = progressSummary.inProgress;
+
+        if (currentStatus === 'completed') {
+          newCompleted--;
+        } else if (nextStatus === 'completed') {
+          newCompleted++;
+        }
+
+        if (currentStatus === 'in_progress') {
+          newInProgress--;
+        } else if (nextStatus === 'in_progress') {
+          newInProgress++;
+        }
 
         setProgressSummary({
           ...progressSummary,
           completed: newCompleted,
+          inProgress: newInProgress,
           percentage: Math.round((newCompleted / progressSummary.total) * 100),
         });
       }
@@ -151,10 +170,14 @@ const Dashboard: React.FC = () => {
           {progressSummary && (
             <section className="bg-white rounded-lg shadow-md p-6 mb-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Progress Overview</h2>
-              <div className="grid grid-cols-2 gap-4 text-center mb-4">
+              <div className="grid grid-cols-3 gap-4 text-center mb-4">
                 <div>
                   <p className="text-sm text-gray-500">Completed</p>
                   <p className="text-2xl font-bold text-indigo-600">{progressSummary.completed}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">In Progress</p>
+                  <p className="text-2xl font-bold text-yellow-600">{progressSummary.inProgress}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Total Problems</p>
@@ -282,25 +305,28 @@ const Dashboard: React.FC = () => {
                                                   </div>
 
                                                   <div className="flex-shrink-0 flex items-center space-x-2">
-                                                    {/* Completion checkbox */}
-                                                    <input
-                                                      type="checkbox"
-                                                      checked={progressMap.get(problem._id) ?? false}
-                                                      onChange={(e) => {
+                                                    <button
+                                                      onClick={(e) => {
                                                         e.stopPropagation(); // prevent triggering navigation
                                                         handleToggleProblemComplete(
                                                           problem._id,
-                                                          progressMap.get(problem._id) ?? false
+                                                          progressMap.get(problem._id) ?? 'not_started'
                                                         );
                                                       }}
-                                                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                                                    />
-
-                                                    <span className="text-xs text-gray-600">
-                                                      {progressMap.get(problem._id)
-                                                        ? 'Done'
-                                                        : 'Todo'}
-                                                    </span>
+                                                      className={`px-2 py-1 rounded text-sm font-medium ${
+                                                        progressMap.get(problem._id) === 'completed'
+                                                          ? 'bg-green-100 text-green-800'
+                                                        : progressMap.get(problem._id) === 'in_progress'
+                                                          ? 'bg-yellow-100 text-yellow-800'
+                                                          : 'bg-gray-200 text-gray-700'
+                                                      }`}
+                                                    >
+                                                      {progressMap.get(problem._id) === 'completed'
+                                                        ? 'Completed'
+                                                        : progressMap.get(problem._id) === 'in_progress'
+                                                        ? 'In Progress'
+                                                        : 'Not Started'}
+                                                    </button>
                                                   </div>
                                                 </div>
                                               </div>

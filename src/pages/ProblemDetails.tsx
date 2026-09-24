@@ -10,7 +10,7 @@ const ProblemDetails: React.FC = () => {
   const [problem, setProblem] = useState<Problem | null>(null);
   const [topic, setTopic] = useState<Topic | null>(null);
   const [chapter, setChapter] = useState<Chapter | null>(null);
-  const [progress, setProgress] = useState<{ completed: boolean } | null>(null);
+  const [progress, setProgress] = useState<'not_started' | 'in_progress' | 'completed' | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,7 +69,7 @@ const ProblemDetails: React.FC = () => {
         const progRes = await api.get('/api/progress');
         const progressList = progRes.data.progress || [];
         const progEntry = progressList.find((p: any) => p.problemId === problemId);
-        setProgress(progEntry ? { completed: !!progEntry.completed } : { completed: false });
+        setProgress(progEntry ? progEntry.status : 'not_started');
       } catch (err: any) {
         setError(err.response?.data?.message ?? 'Failed to load problem details');
       } finally {
@@ -80,14 +80,23 @@ const ProblemDetails: React.FC = () => {
     loadData();
   }, [problemId]);
 
+  // Helper to cycle status: not_started -> in_progress -> completed -> not_started
+  const cycleStatus = (current: 'not_started' | 'in_progress' | 'completed'): 'not_started' | 'in_progress' | 'completed' => {
+    if (current === 'not_started') return 'in_progress';
+    if (current === 'in_progress') return 'completed';
+    return 'not_started';
+  };
+
   const handleToggleComplete = async () => {
     if (!problem) return;
     try {
+      const current = progress ?? 'not_started';
+      const next = cycleStatus(current);
       await api.put(`/api/progress/${problemId}`, {
-        completed: !(progress?.completed ?? false),
+        status: next,
       });
       // update local state
-      setProgress(prev => (!prev ? { completed: true } : { completed: !prev.completed }));
+      setProgress(next);
     } catch (err: any) {
       setError(err.response?.data?.message ?? 'Failed to update progress');
     }
@@ -149,8 +158,8 @@ const ProblemDetails: React.FC = () => {
                       problem.difficulty === 'Easy'
                         ? 'bg-green-100 text-green-800'
                         : problem.difficulty === 'Medium'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-red-100 text-red-800'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-red-100 text-red-800'
                     }`}
                   >
                     {problem.difficulty}
@@ -164,15 +173,22 @@ const ProblemDetails: React.FC = () => {
               </div>
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={progress?.completed ?? false}
-                    onChange={handleToggleComplete}
-                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                  />
-                  <span className="text-sm font-medium text-gray-700">
-                    {progress?.completed ? 'Completed' : 'Mark as complete'}
-                  </span>
+                  <button
+                    onClick={handleToggleComplete}
+                    className={`px-2 py-1 rounded text-sm font-medium ${
+                      (progress ?? 'not_started') === 'completed'
+                        ? 'bg-green-100 text-green-800'
+                      : (progress ?? 'not_started') === 'in_progress'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-gray-200 text-gray-700'
+                    }`}
+                  >
+                    {(progress ?? 'not_started') === 'completed'
+                      ? 'Completed'
+                      : (progress ?? 'not_started') === 'in_progress'
+                        ? 'In Progress'
+                        : 'Not Started'}
+                  </button>
                 </div>
               </div>
             </div>

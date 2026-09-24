@@ -9,18 +9,23 @@ const Dashboard: React.FC = () => {
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [topicsMap, setTopicsMap] = useState<Map<string, Topic[]>>(new Map());
   const [problemsMap, setProblemsMap] = useState<Map<string, Problem[]>>(new Map());
+  const [progressMap, setProgressMap] = useState<Map<string, boolean>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [progress, setProgress] = useState<{
-    completed: number;
-    total: number;
-    percentage: number;
-  } | null>(null);
-
+  const [progressSummary, setProgressSummary] = useState<{ completed: number; total: number; percentage: number } | null>(null);
   const [expandedChapterId, setExpandedChapterId] = useState<string | null>(null);
   const [expandedTopicId, setExpandedTopicId] = useState<string | null>(null);
 
-  // Fetch data on mount
+  // Helper to convert YouTube URL to embed URL (not used here but could be used elsewhere)
+  const youtubeEmbedUrl = (url: string | undefined): string | null => {
+    if (!url) return null;
+    const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return match && match[7].length === 11
+      ? `https://www.youtube.com/embed/${match[7]}`
+      : null;
+  };
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -28,29 +33,30 @@ const Dashboard: React.FC = () => {
         const chaptersData = await fetchChapters();
         setChapters(chaptersData);
 
-        // Fetch progress summary
+        // Fetch progress summary and list
         const progRes = await api.get('/api/progress');
-        setProgress(progRes.data.summary);
+        setProgressSummary(progRes.data.summary); // { completed, total, percentage }
+        const progressList = progRes.data.progress || [];
+        const progressMapTmp = new Map<string, boolean>();
+        progressList.forEach((p: any) => {
+          progressMapTmp.set(p.problemId, !!p.completed);
+        });
+        setProgressMap(progressMapTmp);
 
-        // For each chapter, fetch topics
+        // For each chapter, fetch topics and problems
         for (const chap of chaptersData) {
           const topicsData = await fetchTopics(chap._id);
-
           topicsMap.set(chap._id, topicsData);
-          setTopicsMap(new Map(topicsMap));
+          setTopicsMap(new Map(topicsMap)); // trigger update
 
-          // For each topic, fetch problems
           for (const topic of topicsData) {
             const problemsData = await fetchProblems(topic._id);
-
             problemsMap.set(topic._id, problemsData);
             setProblemsMap(new Map(problemsMap));
           }
         }
       } catch (err: any) {
-        setError(
-          err.response?.data?.message ?? 'Failed to load dashboard data'
-        );
+        setError(err.response?.data?.message ?? 'Failed to load dashboard data');
       } finally {
         setLoading(false);
       }
@@ -62,6 +68,33 @@ const Dashboard: React.FC = () => {
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
     navigate('/login', { replace: true });
+  };
+
+  const handleToggleProblemComplete = async (problemId: string, currentlyCompleted: boolean) => {
+    try {
+      await api.put(`/api/progress/${problemId}`, {
+        completed: !currentlyCompleted,
+      });
+
+      // Update progress map optimistically
+      progressMap.set(problemId, !currentlyCompleted);
+      setProgressMap(new Map(progressMap));
+
+      // Update summary
+      if (progressSummary) {
+        const newCompleted = currentlyCompleted
+          ? progressSummary.completed - 1
+          : progressSummary.completed + 1;
+
+        setProgressSummary({
+          ...progressSummary,
+          completed: newCompleted,
+          percentage: Math.round((newCompleted / progressSummary.total) * 100),
+        });
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message ?? 'Failed to update progress');
+    }
   };
 
   if (loading) {
@@ -85,26 +118,15 @@ const Dashboard: React.FC = () => {
       {/* Navbar */}
       <nav className="bg-white shadow-md flex items-center justify-between px-6 py-4">
         <div className="flex items-center space-x-3">
-          <span className="text-xl font-semibold text-indigo-600">
-            DSA Tracker
-          </span>
+          <span className="text-xl font-semibold text-indigo-600">DSA Tracker</span>
         </div>
-
         <div className="flex space-x-4">
-          <Link
-            to="/chapters"
-            className="text-gray-600 hover:text-indigo-600 font-medium"
-          >
+          <Link to="/chapters" className="text-gray-600 hover:text-indigo-600 font-medium">
             DSA Sheet
           </Link>
-
-          <Link
-            to="/planner"
-            className="text-gray-600 hover:text-indigo-600 font-medium"
-          >
+          <Link to="/planner" className="text-gray-600 hover:text-indigo-600 font-medium">
             Study Planner
           </Link>
-
           <button
             onClick={handleLogout}
             className="text-gray-600 hover:text-red-600 font-medium"
@@ -118,49 +140,36 @@ const Dashboard: React.FC = () => {
       <main className="flex-1 p-6 overflow-y-auto">
         <div className="max-w-4xl mx-auto">
           {/* Welcome section */}
-          <section className="mb-8">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              Welcome back!
-            </h1>
-
+          <section className="mb-6">
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome back!</h1>
             <p className="text-gray-600">
               Ready to track your DSA preparation? Here's your progress overview.
             </p>
           </section>
 
           {/* Progress summary */}
-          {progress && (
-            <section className="bg-white rounded-lg shadow-md p-6 mb-8">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Progress Overview
-              </h2>
-
-              <div className="grid grid-cols-2 gap-4 text-center">
+          {progressSummary && (
+            <section className="bg-white rounded-lg shadow-md p-6 mb-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Progress Overview</h2>
+              <div className="grid grid-cols-2 gap-4 text-center mb-4">
                 <div>
                   <p className="text-sm text-gray-500">Completed</p>
-                  <p className="text-2xl font-bold text-indigo-600">
-                    {progress.completed}
-                  </p>
+                  <p className="text-2xl font-bold text-indigo-600">{progressSummary.completed}</p>
                 </div>
-
                 <div>
                   <p className="text-sm text-gray-500">Total Problems</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {progress.total}
-                  </p>
+                  <p className="text-2xl font-bold text-gray-900">{progressSummary.total}</p>
                 </div>
               </div>
-
-              <div className="mt-4">
+              <div className="mt-2">
                 <div className="bg-gray-200 rounded-full h-2.5 w-full">
                   <div
                     className="bg-indigo-600 h-2.5 rounded-full"
-                    style={{ width: `${progress.percentage}%` }}
+                    style={{ width: `${progressSummary.percentage}%` }}
                   ></div>
                 </div>
-
                 <p className="mt-2 text-sm text-gray-600 text-center">
-                  {progress.percentage}% completed
+                  {progressSummary.percentage}% completed
                 </p>
               </div>
             </section>
@@ -168,41 +177,35 @@ const Dashboard: React.FC = () => {
 
           {/* DSA Sheet section */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              DSA Sheet
-            </h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">DSA Sheet</h2>
 
             {chapters.length === 0 ? (
               <p className="text-gray-500">No chapters available.</p>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {chapters.map((chapter) => (
-                  <div
-                    key={chapter._id}
-                    className="border rounded-lg overflow-hidden shadow-sm"
-                  >
+                  <div key={chapter._id} className="border rounded-lg overflow-hidden shadow-sm">
                     {/* Chapter header */}
                     <div
                       className="flex items-center justify-between bg-gray-50 px-4 py-3 cursor-pointer"
                       onClick={() =>
                         setExpandedChapterId(
-                          expandedChapterId === chapter._id
-                            ? null
-                            : chapter._id
+                          expandedChapterId === chapter._id ? null : chapter._id
                         )
                       }
                     >
                       <div className="flex items-center space-x-3">
                         <div className="w-3 h-3 bg-indigo-600 rounded-full"></div>
-
-                        <span className="font-medium text-gray-800">
-                          {chapter.title}
-                        </span>
+                        <span className="font-medium text-gray-800">{chapter.title}</span>
                       </div>
 
                       {/* Expand/collapse icon */}
                       <span className="text-indigo-500">
-                        {expandedChapterId === chapter._id ? '▾' : '▸'}
+                        {expandedChapterId === chapter._id ? (
+                          '▾'
+                        ) : (
+                          '▸'
+                        )}
                       </span>
                     </div>
 
@@ -218,40 +221,31 @@ const Dashboard: React.FC = () => {
                             {topicsMap
                               .get(chapter._id)
                               ?.map((topic) => (
-                                <div
-                                  key={topic._id}
-                                  className="border-t px-4"
-                                >
+                                <div key={topic._id} className="border-t px-4">
                                   <div
                                     className="flex items-center justify-between py-2 cursor-pointer"
                                     onClick={() =>
                                       setExpandedTopicId(
-                                        expandedTopicId === topic._id
-                                          ? null
-                                          : topic._id
+                                        expandedTopicId === topic._id ? null : topic._id
                                       )
                                     }
                                   >
                                     <div className="flex items-center space-x-2 text-sm">
                                       <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-
                                       <span className="font-medium text-gray-700">
                                         {topic.title}
                                       </span>
                                     </div>
 
                                     <span className="text-gray-400">
-                                      {expandedTopicId === topic._id
-                                        ? '▾'
-                                        : '▸'}
+                                      {expandedTopicId === topic._id ? '▾' : '▸'}
                                     </span>
                                   </div>
 
                                   {/* Topic problems (if expanded) */}
                                   {expandedTopicId === topic._id && (
                                     <div className="mt-2 space-y-2">
-                                      {problemsMap.get(topic._id)?.length ===
-                                      0 ? (
+                                      {problemsMap.get(topic._id)?.length === 0 ? (
                                         <p className="px-4 text-gray-500 text-sm">
                                           No problems in this topic.
                                         </p>
@@ -262,42 +256,52 @@ const Dashboard: React.FC = () => {
                                             ?.map((problem) => (
                                               <div
                                                 key={problem._id}
-                                                className="flex items-center px-3 py-2 bg-gray-50 rounded-md"
+                                                className="flex items-center px-4 py-3 bg-gray-50 rounded-md hover:bg-gray-100 cursor-pointer"
+                                                onClick={() =>
+                                                  navigate(`/problems/${problem._id}`)
+                                                }
                                               >
-                                                <div className="flex-shrink-0 w-3 h-3">
+                                                <div className="flex items-center space-x-3">
                                                   {/* Difficulty badge */}
                                                   <span
                                                     className={`text-xs font-medium px-2 py-0.5 rounded ${
-                                                      problem.difficulty ===
-                                                      'Easy'
+                                                      problem.difficulty === 'Easy'
                                                         ? 'bg-green-100 text-green-800'
-                                                        : problem.difficulty ===
-                                                            'Medium'
+                                                        : problem.difficulty === 'Medium'
                                                           ? 'bg-yellow-100 text-yellow-800'
                                                           : 'bg-red-100 text-red-800'
                                                     }`}
                                                   >
                                                     {problem.difficulty}
                                                   </span>
-                                                </div>
 
-                                                <div className="flex-1 ml-3">
-                                                  <p className="text-sm font-medium text-gray-800">
-                                                    {problem.title}
-                                                  </p>
-
-                                                  {problem.description && (
-                                                    <p className="text-xs text-gray-500 line-clamp-1">
-                                                      {problem.description}
+                                                  <div className="flex-1">
+                                                    <p className="text-sm font-medium text-gray-800">
+                                                      {problem.title}
                                                     </p>
-                                                  )}
-                                                </div>
+                                                  </div>
 
-                                                <div className="flex-shrink-0 text-xs">
-                                                  {/* Status placeholder – could be fetched from progress */}
-                                                  <span className="px-2 py-0.5 bg-gray-200 rounded-full text-gray-600">
-                                                    Not started
-                                                  </span>
+                                                  <div className="flex-shrink-0 flex items-center space-x-2">
+                                                    {/* Completion checkbox */}
+                                                    <input
+                                                      type="checkbox"
+                                                      checked={progressMap.get(problem._id) ?? false}
+                                                      onChange={(e) => {
+                                                        e.stopPropagation(); // prevent triggering navigation
+                                                        handleToggleProblemComplete(
+                                                          problem._id,
+                                                          progressMap.get(problem._id) ?? false
+                                                        );
+                                                      }}
+                                                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                                    />
+
+                                                    <span className="text-xs text-gray-600">
+                                                      {progressMap.get(problem._id)
+                                                        ? 'Done'
+                                                        : 'Todo'}
+                                                    </span>
+                                                  </div>
                                                 </div>
                                               </div>
                                             ))}

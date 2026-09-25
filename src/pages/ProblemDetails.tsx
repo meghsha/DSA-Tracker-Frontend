@@ -23,17 +23,6 @@ const ProblemDetails: React.FC = () => {
       : null;
   };
 
-  // Helper to get display label for practice URL
-  const getPracticeLabel = (url: string | undefined): string => {
-    if (!url) return 'Practice';
-    try {
-      const hostname = new URL(url).hostname.replace('www.', '');
-      return `Practice on ${hostname.charAt(0).toUpperCase() + hostname.slice(1)}`;
-    } catch {
-      return 'Practice';
-    }
-  };
-
   // Helper to get display label for article URL
   const getArticleLabel = (url: string | undefined): string => {
     if (!url) return 'Article';
@@ -116,7 +105,6 @@ const ProblemDetails: React.FC = () => {
   if (!problem) return <div>Loading...</div>;
 
   const embedUrl = youtubeEmbedUrl(problem.youtubeUrl);
-  const practiceLabel = getPracticeLabel(problem.practiceUrl);
   const articleLabel = getArticleLabel(problem.articleUrl);
 
   return (

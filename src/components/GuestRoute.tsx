@@ -1,16 +1,15 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import React from 'react';
 
-const ProtectedRoute: React.FC = () => {
+const GuestRoute: React.FC = () => {
   const token = localStorage.getItem('accessToken');
   if (!token) {
-    return <Navigate to="/login" replace />;
+    return <Outlet />;
   }
 
   // Check if token is expired (JWT)
   try {
     const payload = token.split('.')[1];
-    // Replace base64url characters to standard base64
     const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
     const decoded = atob(base64);
     const parsed = JSON.parse(decoded);
@@ -18,16 +17,16 @@ const ProtectedRoute: React.FC = () => {
     if (parsed.exp && parsed.exp < now) {
       // Token expired
       localStorage.removeItem('accessToken');
-      return <Navigate to="/login" replace />;
+      return <Outlet />;
     }
   } catch (err) {
     // If token is malformed, treat as invalid
     localStorage.removeItem('accessToken');
-    return <Navigate to="/login" replace />;
+    return <Outlet />;
   }
 
-  // Token is valid, render child routes
-  return <Outlet />;
+  // Token is valid, redirect to dashboard
+  return <Navigate to="/dashboard" replace />;
 };
 
-export default ProtectedRoute;
+export default GuestRoute;

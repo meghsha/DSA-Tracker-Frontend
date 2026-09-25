@@ -2,16 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { fetchChapters, fetchTopics, fetchProblems } from '../services/sheetService';
-import type { Chapter, Topic, Problem } from '../types/sheet';
+import type { Topic, Problem } from '../types/sheet';
 import { DayPicker, DayButton } from 'react-day-picker';
 import 'react-day-picker/style.css';
 
 const Planner: React.FC = () => {
   const navigate = useNavigate();
-
-  // State for problems data (chapters -> topics -> problems)
-  const [chapters, setChapters] = useState<Chapter[]>([]);
-
   const [topicsMap, setTopicsMap] = useState<Map<string, Topic[]>>(
     new Map()
   );
@@ -109,8 +105,6 @@ const Planner: React.FC = () => {
 
       const chaptersData = await fetchChapters();
 
-      setChapters(chaptersData);
-
       const allProblemsArray: Problem[] = [];
 
       for (const chap of chaptersData) {
@@ -188,27 +182,6 @@ const Planner: React.FC = () => {
     loadStudyPlansForMonth(currentMonth);
   }, [currentMonth]);
 
-  // Navigation handlers
-  const handlePrevMonth = () => {
-    setCurrentMonth((prev) => {
-      const d = new Date(prev);
-
-      d.setMonth(d.getMonth() - 1);
-
-      return d;
-    });
-  };
-
-  const handleNextMonth = () => {
-    setCurrentMonth((prev) => {
-      const d = new Date(prev);
-
-      d.setMonth(d.getMonth() + 1);
-
-      return d;
-    });
-  };
-
   // Get plans for a specific date - FIXED to depend ONLY on the passed date
   const getPlansForDate = (date: Date) => {
     if (!date) return [];
@@ -229,36 +202,6 @@ const Planner: React.FC = () => {
     });
   };
 
-  // Get preview text for plans on a specific date
-  const getPlanPreviewForDate = (date: Date): string => {
-    if (!date) return '';
-
-    const dateStr = formatDateLocal(date);
-
-    const plansForDate = studyPlans.filter((plan) => {
-      const scheduledDate = plan.scheduledDate;
-
-      if (typeof scheduledDate === 'string') {
-        return scheduledDate.startsWith(dateStr);
-      } else if (scheduledDate instanceof Date) {
-        return formatDateLocal(scheduledDate) === dateStr;
-      }
-
-      return false;
-    });
-
-    if (plansForDate.length === 0) return '';
-
-    // Show first problem title, and if more than 1, show "+X more"
-    if (plansForDate.length === 1) {
-      return plansForDate[0].problemId.title;
-    } else {
-      return `${plansForDate[0].problemId.title} +${
-        plansForDate.length - 1
-      } more`;
-    }
-  };
-
   // Date selection handler
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date);
@@ -274,17 +217,6 @@ const Planner: React.FC = () => {
   // Open add modal handler
   const handleOpenAddModal = () => {
     setIsAddModalOpen(true);
-  };
-
-  // Close add modal handler
-  const handleCloseAddModal = () => {
-    setIsAddModalOpen(false);
-
-    setSelectedProblemId(null);
-
-    setNotes('');
-
-    setSubmitError(null);
   };
 
   // Add study plan handler
@@ -545,108 +477,6 @@ const Planner: React.FC = () => {
             {/* Left: Calendar */}
             <div className="bg-white rounded-lg shadow-md border border-gray-200">
               <div className="p-6">
-                {/* DayPicker with improved styling */}
-                {/* <DayPicker
-                  month={currentMonth}
-                  selected={selectedDate}
-                  onDayClick={handleDateSelect}
-                  numberOfMonths={1}
-                  // Enable dayProvider to customize day rendering
-                  dayProvider={({
-                    day,
-                    modifiers,
-                    styles,
-                    className,
-                  }) => {
-                    // Check if this day has plans
-                    const plansForDay = getPlansForDate(day);
-                    const hasPlans = plansForDay.length > 0;
-                    const planPreview = hasPlans
-                      ? getPlanPreviewForDate(day)
-                      : '';
-
-                    // Determine if we should show text preview (only on larger screens)
-                    // We'll use a CSS class to handle responsiveness
-                    const showTextPreview =
-                      hasPlans && planPreview.length > 0;
-
-                    return (
-                      <div
-                        ref={styles.ref}
-                        className={`${className}
-                          ${
-                            modifiers.today
-                              ? 'calendar-cell-today'
-                              : ''
-                          }
-                          ${
-                            modifiers.selected
-                              ? 'calendar-cell-selected'
-                              : ''
-                          }
-                          ${
-                            modifiers.outside
-                              ? 'calendar-cell-outside'
-                              : ''
-                          }
-                          ${
-                            hasPlans
-                              ? 'calendar-cell-has-plans'
-                              : ''
-                          }
-                          ${
-                            modifiers.selected && hasPlans
-                              ? 'calendar-cell-selected-has-plans'
-                              : ''
-                          }`}
-                        tabIndex={-1}
-                        role="gridcell"
-                        aria-selected={modifiers.selected}
-                        aria-disabled={modifiers.outside}
-                      >
-                        <div className="calendar-day-content">
-                          <div className="calendar-day-number">
-                            {day.getDate()}
-                          </div>
-
-                          {showTextPreview && (
-                            <div className="calendar-day-preview">
-                              <div className="calendar-day-preview-text">
-                                {planPreview}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  }}
-                  // Custom classNames for better spacing and layout
-                  classNames={{
-                    root: 'w-full',
-                    table:'w-full border-separate border-spacing-2',
-                    // Remove the default caption since we're handling month navigation ourselves
-                    caption: 'hidden',
-                    weekday:'text-center font-medium text-gray-500 text-xs pb-2',
-                    weekday__weekend:'text-center font-medium text-gray-500 text-xs pb-2',
-                    body: 'space-y-2',
-                    row: 'flex flex-wrap',
-                    // Base cell styling - made more spacious
-                    cell: 'relative flex w-full min-h-[90px] flex-col items-start justify-start p-2 rounded-lg cursor-pointer transition-colors hover:bg-gray-50 border border-gray-100',
-                    // Today state - subtle indigo outline
-                    cell__today:
-                      'border-2 border-indigo-300',
-
-                    // Selected date - indigo background with white text
-                    cell__selected:
-                      'bg-indigo-600 text-white',
-
-                    // Outside month dates - muted
-                    cell__outside: 'text-gray-300',
-
-                    // Weekend styling
-                    cell__weekend: 'text-gray-400',
-                  }}
-                /> */}
                 <DayPicker
                   mode="single"
                   month={currentMonth}

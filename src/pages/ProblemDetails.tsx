@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { fetchChapters, fetchTopics, fetchProblems } from '../services/sheetService';
 import type { Chapter, Topic, Problem } from '../types/sheet';
 
 const ProblemDetails: React.FC = () => {

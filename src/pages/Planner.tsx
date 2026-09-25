@@ -653,27 +653,75 @@ const Planner: React.FC = () => {
                       handleDateSelect(date);
                     }
                   }}
-                  onMonthChange={setCurrentMonth}
+                  onMonthChange={(month) => {
+                    setCurrentMonth(month);
+                    const today = new Date();
+                    const isCurrentMonth =
+                      month.getFullYear() === today.getFullYear() &&
+                      month.getMonth() === today.getMonth();
+                  
+                    if (isCurrentMonth) {
+                      // Current month → select today's date
+                      setSelectedDate(
+                        new Date(
+                          today.getFullYear(),
+                          today.getMonth(),
+                          today.getDate(),
+                          12,
+                          0,
+                          0
+                        )
+                      );
+                    } else {
+                      // Other month → select the 1st
+                      setSelectedDate(
+                        new Date(
+                          month.getFullYear(),
+                          month.getMonth(),
+                          1,
+                          12,
+                          0,
+                          0
+                        )
+                      );
+                    }
+                  }}
                   numberOfMonths={1}
 
                   classNames={{
-                    root: 'w-full',
+                    root: 'w-full relative',
                     months: 'w-full',
                     month: 'w-full',
-                    month_grid: 'w-full table-fixed border-separate border-spacing-2',
-                    weekdays: '',
-                    weekday: 'text-center text-xs font-medium text-gray-500 pb-3',
-                    weeks: '',
-                    week: '',
+                  
+                    month_caption: 'flex items-center justify-center mb-4 h-10',
+                    caption_label: 'text-lg font-semibold text-gray-900',
+                  
+                    nav: 'absolute top-0 right-0 flex items-center gap-2',
+                    button_previous:
+                      'w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-100',
+                    button_next:
+                      'w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-100',
+                  
+                    month_grid:
+                      'w-full table-fixed border-separate border-spacing-2',
+                  
+                    weekday:
+                      'text-center text-xs font-medium text-gray-500 pb-3',
+                  
                     day: 'p-1 align-top',
+                  
                     day_button:
                       'w-full min-h-[85px] rounded-xl border border-gray-100 p-2 text-left transition-all hover:bg-indigo-50 hover:border-indigo-200',
+                  
                     selected:
                       'bg-indigo-600 text-white rounded-xl',
+                  
                     today:
                       'ring-2 ring-indigo-300 rounded-xl',
+                  
                     outside:
                       'text-gray-300 opacity-50',
+                  
                     disabled:
                       'text-gray-300 opacity-50',
                   }}
@@ -757,93 +805,89 @@ const Planner: React.FC = () => {
                         </p>
 
                         <div className="space-y-4">
-                          {getPlansForDate(selectedDate).map((plan) => (
-                            <div className="space-y-4">
-                              {getPlansForDate(selectedDate).map(
-                                (plan) => (
-                                  <div
-                                    key={plan._id}
-                                    className="border rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer"
-                                    onClick={() =>
-                                      handleEditStudyPlan(plan)
-                                    }
+                          {getPlansForDate(selectedDate).map(
+                            (plan) => (
+                              <div
+                                key={plan._id}
+                                className="border rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                                onClick={() =>
+                                  handleEditStudyPlan(plan)
+                                }
+                              >
+                                <div className="flex justify-between items-start mb-2">
+                                  <h3 className="font-semibold text-gray-900">
+                                    {plan?.problemId?.title}
+                                  </h3>
+
+                                  <span
+                                    className={`px-2 py-0.5 text-xs rounded ${
+                                      plan.problemId?.difficulty ===
+                                      'Easy'
+                                        ? 'bg-green-100 text-green-800'
+                                        : plan.problemId?.difficulty ===
+                                            'Medium'
+                                          ? 'bg-yellow-100 text-yellow-800'
+                                          : 'bg-red-100 text-red-800'
+                                    }`}
                                   >
-                                    <div className="flex justify-between items-start mb-2">
-                                      <h3 className="font-semibold text-gray-900">
-                                        {plan?.problemId?.title}
-                                      </h3>
-    
-                                      <span
-                                        className={`px-2 py-0.5 text-xs rounded ${
-                                          plan.problemId?.difficulty ===
-                                          'Easy'
-                                            ? 'bg-green-100 text-green-800'
-                                            : plan.problemId?.difficulty ===
-                                                'Medium'
-                                              ? 'bg-yellow-100 text-yellow-800'
-                                              : 'bg-red-100 text-red-800'
-                                        }`}
-                                      >
-                                        {
-                                          plan.problemId?.difficulty
-                                        }
-                                      </span>
-                                    </div>
-    
-                                    {plan.problemId?.description && (
-                                      <p className="text-sm text-gray-600 mb-2">
-                                        {
-                                          plan.problemId?.description
-                                        }
-                                      </p>
-                                    )}
-    
-                                    {plan.notes && (
-                                      <div className="mb-4">
-                                        <p className="text-sm font-medium text-gray-700 mb-1">
-                                          Notes
-                                        </p>
-    
-                                        <p className="text-gray-600">
-                                          {plan.notes}
-                                        </p>
-                                      </div>
-                                    )}
-    
-                                    <div className="flex justify-end space-x-2">
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-    
-                                          handleEditStudyPlan(
-                                            plan
-                                          );
-                                        }}
-                                        className="px-3 py-1 text-sm font-medium text-indigo-600 hover:text-indigo-500"
-                                      >
-                                        Edit
-                                      </button>
-    
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setPlanToDeleteId(
-                                            plan._id
-                                          );
-                                          setDeleteConfirmOpen(
-                                            true
-                                          );
-                                        }}
-                                        className="px-3 py-1 text-sm font-medium text-red-600 hover:text-red-500"
-                                      >
-                                        Delete
-                                      </button>
-                                    </div>
+                                    {
+                                      plan.problemId?.difficulty
+                                    }
+                                  </span>
+                                </div>
+
+                                {plan.problemId?.description && (
+                                  <p className="text-sm text-gray-600 mb-2">
+                                    {
+                                      plan.problemId?.description
+                                    }
+                                  </p>
+                                )}
+
+                                {plan.notes && (
+                                  <div className="mb-4">
+                                    <p className="text-sm font-medium text-gray-700 mb-1">
+                                      Notes
+                                    </p>
+
+                                    <p className="text-gray-600">
+                                      {plan.notes}
+                                    </p>
                                   </div>
-                                )
-                              )}
-                            </div>
-                          ))}
+                                )}
+
+                                <div className="flex justify-end space-x-2">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+
+                                      handleEditStudyPlan(
+                                        plan
+                                      );
+                                    }}
+                                    className="px-3 py-1 text-sm font-medium text-indigo-600 hover:text-indigo-500"
+                                  >
+                                    Edit
+                                  </button>
+
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setPlanToDeleteId(
+                                        plan._id
+                                      );
+                                      setDeleteConfirmOpen(
+                                        true
+                                      );
+                                    }}
+                                    className="px-3 py-1 text-sm font-medium text-red-600 hover:text-red-500"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </div>
+                            )
+                          )}
                         </div>
 
                         <button
@@ -967,11 +1011,8 @@ const Planner: React.FC = () => {
                   type="button"
                   onClick={() => {
                     setIsAddModalOpen(false);
-
                     setSelectedProblemId(null);
-
                     setNotes('');
-
                     setSubmitError(null);
                   }}
                   className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
@@ -1007,7 +1048,6 @@ const Planner: React.FC = () => {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-
                 handleUpdateStudyPlan();
               }}
               className="space-y-4"
@@ -1082,22 +1122,16 @@ const Planner: React.FC = () => {
                   type="button"
                   onClick={() => {
                     setEditModalOpen(false);
-
                     setEditingPlanId(null);
-
                     setSelectedProblemId(null);
-
                     setSelectedDate(null);
-
                     setNotes('');
-
                     setEditSubmitError(null);
                   }}
                   className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
                 >
                   Cancel
                 </button>
-
                 <button
                   type="submit"
                   disabled={
@@ -1109,7 +1143,6 @@ const Planner: React.FC = () => {
                     ? 'Updating...'
                     : 'Update'}
                 </button>
-
                 <button
                   type="button"
                   onClick={handleDeleteStudyPlan}
@@ -1130,25 +1163,20 @@ const Planner: React.FC = () => {
             <h2 className="text-xl font-bold text-gray-900 mb-4">
               Confirm Deletion
             </h2>
-
             <p className="mb-6">
               Remove this problem from your study plan?
             </p>
-
             {deleteError && (
               <p className="mb-4 text-sm text-red-600">
                 {deleteError}
               </p>
             )}
-
             <div className="flex justify-end space-x-3">
               <button
                 type="button"
                 onClick={() => {
                   setDeleteConfirmOpen(false);
-
                   setPlanToDeleteId(null);
-
                   setDeleteError(null);
                 }}
                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"

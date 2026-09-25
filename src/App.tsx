@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import ProblemDetails from './pages/ProblemDetails';
+import Planner from './pages/Planner';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
           >
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/problems/:problemId" element={<ProblemDetails />} />
+            <Route path="/planner" element={<Planner />} />
             {/* Add other protected routes here */}
             <Route
               path="/"

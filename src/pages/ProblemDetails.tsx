@@ -80,25 +80,21 @@ const ProblemDetails: React.FC = () => {
     loadData();
   }, [problemId]);
 
-  // Helper to cycle status: not_started -> in_progress -> completed -> not_started
-  const cycleStatus = (current: 'not_started' | 'in_progress' | 'completed'): 'not_started' | 'in_progress' | 'completed' => {
-    if (current === 'not_started') return 'in_progress';
-    if (current === 'in_progress') return 'completed';
-    return 'not_started';
-  };
-
-  const handleToggleComplete = async () => {
+  const handleStatusChange = async (
+    newStatus: 'not_started' | 'in_progress' | 'completed'
+  ) => {
     if (!problem) return;
+  
     try {
-      const current = progress ?? 'not_started';
-      const next = cycleStatus(current);
       await api.put(`/api/progress/${problemId}`, {
-        status: next,
+        status: newStatus,
       });
-      // update local state
-      setProgress(next);
+  
+      setProgress(newStatus);
     } catch (err: any) {
-      setError(err.response?.data?.message ?? 'Failed to update progress');
+      setError(
+        err.response?.data?.message ?? 'Failed to update progress'
+      );
     }
   };
 
@@ -176,15 +172,28 @@ const ProblemDetails: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center space-x-4">
-                {/* MAKE PROBLEM STATUS CONTROL MORE OBVIOUS - Improved status section */}
                 <div className="flex items-center space-x-2">
-                  <span className="text-xs font-medium text-gray-600">Status:</span>
+                  <span className="text-xs font-medium text-gray-600">
+                    Status:
+                  </span>
+
                   <select
                     value={progress ?? 'not_started'}
-                    onChange={(e) => {
-                      handleToggleComplete();
-                    }}
-                    className="px-3 py-1 rounded border border-gray-300 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    onChange={(e) =>
+                      handleStatusChange(
+                        e.target.value as
+                          | 'not_started'
+                          | 'in_progress'
+                          | 'completed'
+                      )
+                    }
+                    className={`px-3 py-2 rounded-lg border text-sm font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                      progress === 'completed'
+                        ? 'bg-green-50 text-green-700 border-green-200'
+                        : progress === 'in_progress'
+                          ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                          : 'bg-gray-50 text-gray-700 border-gray-200'
+                    }`}
                     aria-label="Problem status"
                   >
                     <option value="not_started">Not Started</option>

@@ -70,52 +70,6 @@ const Dashboard: React.FC = () => {
     navigate('/login', { replace: true });
   };
 
-  const handleToggleProblemComplete = async (problemId: string, currentStatus: 'not_started' | 'in_progress' | 'completed') => {
-    // Determine next status in cycle: not_started -> in_progress -> completed -> not_started
-    const nextStatus: 'not_started' | 'in_progress' | 'completed' =
-      currentStatus === 'not_started' ? 'in_progress'
-        : currentStatus === 'in_progress' ? 'completed'
-        : 'not_started';
-
-    try {
-      await api.put(`/api/progress/${problemId}`, {
-        status: nextStatus,
-      });
-
-      // Update progress map immutably
-      const newProgressMap = new Map(progressMap);
-      newProgressMap.set(problemId, nextStatus);
-      setProgressMap(newProgressMap);
-
-      // Update summary optimistically
-      if (progressSummary) {
-        let newCompleted = progressSummary.completed;
-        let newInProgress = progressSummary.inProgress;
-
-        if (currentStatus === 'completed') {
-          newCompleted--;
-        } else if (nextStatus === 'completed') {
-          newCompleted++;
-        }
-
-        if (currentStatus === 'in_progress') {
-          newInProgress--;
-        } else if (nextStatus === 'in_progress') {
-          newInProgress++;
-        }
-
-        setProgressSummary({
-          ...progressSummary,
-          completed: newCompleted,
-          inProgress: newInProgress,
-          percentage: Math.round((newCompleted / progressSummary.total) * 100),
-        });
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.message ?? 'Failed to update progress');
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -137,12 +91,15 @@ const Dashboard: React.FC = () => {
       {/* Navbar */}
       <nav className="bg-white shadow-md flex items-center justify-between px-6 py-4">
         <div className="flex items-center space-x-3">
-          <span className="text-xl font-semibold text-indigo-600">DSA Tracker</span>
+          <Link
+            to="/dashboard"
+            className="text-xl font-semibold text-indigo-600"
+          >
+            DSA Tracker
+          </Link>
         </div>
         <div className="flex space-x-4">
-          <Link to="/chapters" className="text-gray-600 hover:text-indigo-600 font-medium">
-            DSA Sheet
-          </Link>
+          {/* Removed DSA Sheet navbar item as requested */}
           <Link to="/planner" className="text-gray-600 hover:text-indigo-600 font-medium">
             Study Planner
           </Link>
@@ -304,29 +261,51 @@ const Dashboard: React.FC = () => {
                                                     </p>
                                                   </div>
 
-                                                  <div className="flex-shrink-0 flex items-center space-x-2">
-                                                    <button
-                                                      onClick={(e) => {
-                                                        e.stopPropagation(); // prevent triggering navigation
-                                                        handleToggleProblemComplete(
-                                                          problem._id,
-                                                          progressMap.get(problem._id) ?? 'not_started'
-                                                        );
-                                                      }}
-                                                      className={`px-2 py-1 rounded text-sm font-medium ${
-                                                        progressMap.get(problem._id) === 'completed'
-                                                          ? 'bg-green-100 text-green-800'
-                                                        : progressMap.get(problem._id) === 'in_progress'
-                                                          ? 'bg-yellow-100 text-yellow-800'
-                                                          : 'bg-gray-200 text-gray-700'
-                                                      }`}
-                                                    >
-                                                      {progressMap.get(problem._id) === 'completed'
-                                                        ? 'Completed'
-                                                        : progressMap.get(problem._id) === 'in_progress'
-                                                        ? 'In Progress'
-                                                        : 'Not Started'}
-                                                    </button>
+                                                  <div className="flex-shrink-0 flex items-center">
+                                                    {(() => {
+                                                      const status = progressMap.get(problem._id) ?? 'not_started';
+
+                                                      const statusConfig = {
+                                                        not_started: {
+                                                          label: 'Not Started',
+                                                          className: 'bg-gray-100 text-gray-600 border-gray-200',
+                                                        },
+                                                        in_progress: {
+                                                          label: 'In Progress',
+                                                          className: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+                                                        },
+                                                        completed: {
+                                                          label: 'Completed',
+                                                          className: 'bg-green-50 text-green-700 border-green-200',
+                                                        },
+                                                      };
+
+                                                      const currentStatus = statusConfig[status];
+
+                                                      return (
+                                                        <div className="flex items-center gap-2">
+                                                          <span className="text-xs font-medium text-gray-600">
+                                                            Status
+                                                          </span>
+
+                                                          <span
+                                                            className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${currentStatus.className}`}
+                                                          >
+                                                            <span
+                                                              className={`mr-1.5 h-1.5 w-1.5 rounded-full ${
+                                                                status === 'completed'
+                                                                  ? 'bg-green-500'
+                                                                  : status === 'in_progress'
+                                                                    ? 'bg-yellow-500'
+                                                                    : 'bg-gray-400'
+                                                              }`}
+                                                            />
+
+                                                            {currentStatus.label}
+                                                          </span>
+                                                        </div>
+                                                      );
+                                                    })()}
                                                   </div>
                                                 </div>
                                               </div>

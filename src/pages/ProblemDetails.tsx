@@ -129,15 +129,19 @@ const ProblemDetails: React.FC = () => {
       {/* Navbar */}
       <nav className="bg-white shadow-md flex items-center justify-between px-6 py-4">
         <div className="flex items-center space-x-3">
-          <Link to="/dashboard" className="text-gray-600 hover:text-indigo-600 font-medium">
+          {/* HOME ICON NAVIGATION - Made more obvious and clickable */}
+          <Link
+            to="/dashboard"
+            className="flex items-center space-x-2 text-gray-600 hover:text-indigo-600 hover:text-indigo-500 font-medium"
+          >
             ← Back to DSA Sheet
           </Link>
-          <span className="text-xl font-semibold text-indigo-600">DSA Tracker</span>
         </div>
         <div className="flex space-x-2">
+          {/* HOME ICON NAVIGATION - Home button made more obvious */}
           <button
             onClick={() => navigate('/dashboard')}
-            className="text-gray-600 hover:text-red-600 font-medium"
+            className="flex items-center space-x-2 text-gray-600 hover:text-indigo-600 hover:text-indigo-500 font-medium"
           >
             Home
           </button>
@@ -172,23 +176,21 @@ const ProblemDetails: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center space-x-4">
+                {/* MAKE PROBLEM STATUS CONTROL MORE OBVIOUS - Improved status section */}
                 <div className="flex items-center space-x-2">
-                  <button
-                    onClick={handleToggleComplete}
-                    className={`px-2 py-1 rounded text-sm font-medium ${
-                      (progress ?? 'not_started') === 'completed'
-                        ? 'bg-green-100 text-green-800'
-                      : (progress ?? 'not_started') === 'in_progress'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-gray-200 text-gray-700'
-                    }`}
+                  <span className="text-xs font-medium text-gray-600">Status:</span>
+                  <select
+                    value={progress ?? 'not_started'}
+                    onChange={(e) => {
+                      handleToggleComplete();
+                    }}
+                    className="px-3 py-1 rounded border border-gray-300 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    aria-label="Problem status"
                   >
-                    {(progress ?? 'not_started') === 'completed'
-                      ? 'Completed'
-                      : (progress ?? 'not_started') === 'in_progress'
-                        ? 'In Progress'
-                        : 'Not Started'}
-                  </button>
+                    <option value="not_started">Not Started</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -207,7 +209,7 @@ const ProblemDetails: React.FC = () => {
             <section className="mb-8">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Learn</h2>
               <div className="bg-white rounded-lg shadow-md p-6">
-                <div className="relative w-full h-0 pb-56.25"> {/* 16:9 */ }
+                <div className="relative w-full aspect-video">
                   <iframe
                     className="absolute inset-0 w-full h-full rounded-md"
                     src={embedUrl}
@@ -215,31 +217,26 @@ const ProblemDetails: React.FC = () => {
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
-                  ></iframe>
+                  />
                 </div>
               </div>
             </section>
           )}
 
           {/* Resources Section */}
-          {problem.practiceUrl || problem.articleUrl && (
+          {(problem.practiceUrl || problem.articleUrl) && (
             <section className="mb-8">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Resources</h2>
               <div className="grid gap-4 md:grid-cols-2">
+                {/* CONVERT practiceUrl INTO A PROPER BUTTON */}
                 {problem.practiceUrl && (
                   <a
                     href={problem.practiceUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="block bg-white rounded-lg shadow-md p-4 flex items-center justify-between hover:bg-indigo-50 transition-colors"
+                    className="block w-full bg-white rounded-lg shadow-md p-4 flex items-center justify-center hover:bg-indigo-50 transition-colors"
                   >
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-800">{practiceLabel}</p>
-                      <p className="text-sm text-gray-500">Start solving the problem</p>
-                    </div>
-                    <span className="text-indigo-600">
-                      →
-                    </span>
+                    Practice Problem ↗
                   </a>
                 )}
                 {problem.articleUrl && (

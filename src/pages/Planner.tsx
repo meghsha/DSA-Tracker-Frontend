@@ -489,9 +489,12 @@ const Planner: React.FC = () => {
       {/* Navbar */}
       <nav className="bg-white shadow-md flex items-center justify-between px-6 py-4">
         <div className="flex items-center space-x-3">
-          <span className="text-xl font-semibold text-indigo-600">
+          <Link
+            to="/dashboard"
+            className="text-xl font-semibold text-indigo-600"
+          >
             DSA Tracker
-          </span>
+          </Link>
         </div>
 
         <div className="flex space-x-4">

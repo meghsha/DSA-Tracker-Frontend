@@ -38,23 +38,23 @@ const ProblemDetails: React.FC = () => {
     const loadData = async () => {
       try {
         // Fetch problem
-        const probRes = await api.get(`/api/problems/${problemId}`);
+        const probRes = await api.get(`/problems/${problemId}`);
         setProblem(probRes.data);
 
         // Fetch topic
         if (probRes.data.topicId) {
-          const topicRes = await api.get(`/api/topics/${probRes.data.topicId}`);
+          const topicRes = await api.get(`/topics/${probRes.data.topicId}`);
           setTopic(topicRes.data);
 
           // Fetch chapter
           if (topicRes.data.chapterId) {
-            const chapRes = await api.get(`/api/chapters/${topicRes.data.chapterId}`);
+            const chapRes = await api.get(`/chapters/${topicRes.data.chapterId}`);
             setChapter(chapRes.data);
           }
         }
 
         // Fetch progress for this problem (to know completion state)
-        const progRes = await api.get('/api/progress');
+        const progRes = await api.get('/progress');
         const progressList = progRes.data.progress || [];
         const progEntry = progressList.find((p: any) => p.problemId === problemId);
         setProgress(progEntry ? progEntry.status : 'not_started');
@@ -74,7 +74,7 @@ const ProblemDetails: React.FC = () => {
     if (!problem) return;
   
     try {
-      await api.put(`/api/progress/${problemId}`, {
+      await api.put(`/progress/${problemId}`, {
         status: newStatus,
       });
   

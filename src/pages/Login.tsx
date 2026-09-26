@@ -55,7 +55,7 @@ const Login: React.FC = () => {
 
     setLoading(true);
     try {
-      const response = await api.post<LoginResponse>('/api/auth/login', {
+      const response = await api.post<LoginResponse>('/auth/login', {
         email,
         password,
       });

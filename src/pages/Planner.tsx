@@ -158,7 +158,7 @@ const Planner: React.FC = () => {
       const endDateStr = formatDateLocal(end);
 
       const res = await api.get(
-        `/api/study-plans?startDate=${startDateStr}&endDate=${endDateStr}`
+        `/study-plans?startDate=${startDateStr}&endDate=${endDateStr}`
       );
 
       setStudyPlans(res.data);
@@ -228,7 +228,7 @@ const Planner: React.FC = () => {
     setSubmitError(null);
 
     try {
-      await api.post('/api/study-plans', {
+      await api.post('/study-plans', {
         problemId: selectedProblemId,
 
         scheduledDate: formatDateLocal(selectedDate),
@@ -259,7 +259,7 @@ const Planner: React.FC = () => {
     setDeleteError(null);
 
     try {
-      await api.delete(`/api/study-plans/${id}`);
+      await api.delete(`/study-plans/${id}`);
 
       setDeleteConfirmOpen(false);
 
@@ -304,7 +304,7 @@ const Planner: React.FC = () => {
     setEditSubmitError(null);
 
     try {
-      await api.patch(`/api/study-plans/${editingPlanId}`, {
+      await api.patch(`/study-plans/${editingPlanId}`, {
         problemId: selectedProblemId,
 
         scheduledDate: selectedDate

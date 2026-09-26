@@ -74,7 +74,7 @@ const Login: React.FC = () => {
       buttonText="Sign in"
       isLoading={loading}
       onSubmit={handleSubmit}
-      subtitle="Welcome back\nContinue tracking your DSA preparation."
+      subtitle="Welcome back! Continue tracking your DSA preparation."
       navText="Don't have an account? "
       navLink="/register"
       navAction="Create one"
@@ -129,9 +129,9 @@ const Login: React.FC = () => {
             aria-label="Show password"
           >
             {showPassword ? (
-              <span className="text-sm text-gray-500">Show</span>
-            ) : (
               <span className="text-sm text-gray-500">Hide</span>
+            ) : (
+              <span className="text-sm text-gray-500">Show</span>
             )}
           </button>
         </div>

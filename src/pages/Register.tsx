@@ -174,9 +174,9 @@ const Register: React.FC = () => {
               aria-label="Show password"
             >
               {showPassword ? (
-                <span className="text-sm text-gray-500">Show</span>
-              ) : (
                 <span className="text-sm text-gray-500">Hide</span>
+              ) : (
+                <span className="text-sm text-gray-500">Show</span>
               )}
             </button>
           </div>

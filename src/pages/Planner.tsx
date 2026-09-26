@@ -1,21 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { fetchChapters, fetchTopics, fetchProblems } from '../services/sheetService';
-import type { Topic, Problem } from '../types/sheet';
+import { fetchDSTree } from '../services/sheetService';
+import type { ChapterWithTopicsAndProblems } from '../services/sheetService';
+import type { Problem } from '../types/sheet';
 import { DayPicker, DayButton } from 'react-day-picker';
 import 'react-day-picker/style.css';
 
 const Planner: React.FC = () => {
   const navigate = useNavigate();
-  const [topicsMap, setTopicsMap] = useState<Map<string, Topic[]>>(
-    new Map()
-  );
-
-  const [problemsMap, setProblemsMap] = useState<Map<string, Problem[]>>(
-    new Map()
-  );
-
   const [allProblems, setAllProblems] = useState<Problem[]>([]);
 
   // State for study plans
@@ -96,34 +89,21 @@ const Planner: React.FC = () => {
     return new Date(year, month - 1, day, 12, 0, 0);
   };
 
-  // Load all problems from backend (chapters -> topics -> problems)
+  // Load all problems from backend using optimized tree fetching
   const loadAllProblems = async () => {
     try {
       setLoading(true);
-
       setError(null);
 
-      const chaptersData = await fetchChapters();
+      // Fetch the complete chapter-topic-problem tree in one request
+      const treeData: ChapterWithTopicsAndProblems[] = await fetchDSTree();
 
-      const allProblemsArray: Problem[] = [];
-
-      for (const chap of chaptersData) {
-        const topicsData = await fetchTopics(chap._id);
-
-        topicsMap.set(chap._id, topicsData);
-
-        setTopicsMap(new Map(topicsMap)); // trigger update
-
-        for (const topic of topicsData) {
-          const problemsData = await fetchProblems(topic._id);
-
-          problemsMap.set(topic._id, problemsData);
-
-          setProblemsMap(new Map(problemsMap)); // trigger update
-
-          allProblemsArray.push(...problemsData);
-        }
-      }
+      // Flatten all problems from the tree structure
+      const allProblemsArray: Problem[] = treeData.flatMap(chapter =>
+        (chapter.topics ?? []).flatMap(topic =>
+          topic.problems ?? []
+        )
+      );
 
       // Sort problems alphabetically by title
       setAllProblems(
